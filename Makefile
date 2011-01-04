@@ -1,48 +1,22 @@
-NAME		:= epgsql
-VERSION		:= 1.3
+ERL ?= erl
+APP := epgsql
 
-ERL  		:= erl
-ERLC 		:= erlc
+.PHONY: deps test
 
-# ------------------------------------------------------------------------
+all: deps
+	@./rebar compile
 
-ERLC_FLAGS	:= -Wall -I include
-
-SRC			:= $(wildcard src/*.erl)
-TESTS 		:= $(wildcard test_src/*.erl)
-RELEASE		:= $(NAME)-$(VERSION).tar.gz
-
-APPDIR		:= $(NAME)-$(VERSION)
-BEAMS		:= $(SRC:src/%.erl=ebin/%.beam) 
-
-compile: $(BEAMS) ebin/$(NAME).app
-
-app: compile
-	@mkdir -p $(APPDIR)/ebin
-	@cp -r ebin/* $(APPDIR)/ebin/
-	@cp -r include $(APPDIR)
-
-release: app
-	@tar czvf $(RELEASE) $(APPDIR)
+deps:
+	@./rebar get-deps
 
 clean:
-	@rm -f ebin/*.{beam,app}
-	@rm -rf $(NAME)-$(VERSION) $(NAME)-*.tar.gz
+	@./rebar clean
 
-test: $(TESTS:test_src/%.erl=test_ebin/%.beam) compile
-	@dialyzer -n --src -c src
-	$(ERL) -pa ebin/ -pa test_ebin/ -noshell -s pgsql_tests run_tests -s init stop
+distclean: clean
+	@./rebar delete-deps
 
-# ------------------------------------------------------------------------
+docs:
+	@erl -noshell -run edoc_run application '$(APP)' '"."' '[]'
 
-.SUFFIXES: .erl .beam
-.PHONY:    app compile clean test
-
-ebin/%.beam : src/%.erl
-	$(ERLC) $(ERLC_FLAGS) -o $(dir $@) $<
-
-ebin/%.app : src/%.app.src
-	sed -e s/VERSION/$(VERSION)/g $< > $@
-
-test_ebin/%.beam : test_src/%.erl
-	$(ERLC) $(ERLC_FLAGS) -o $(dir $@) $<
+test:
+	@./rebar eunit
